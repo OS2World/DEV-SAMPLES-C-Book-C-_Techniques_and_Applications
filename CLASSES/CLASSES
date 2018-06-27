@@ -1,0 +1,596 @@
+//  Header:     Complex
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Provides the class "Complex" for C++ programs. The majority
+//              of the class is implemented inline for efficiency. Only
+//              the division, power, and i/o methods are actual functions.
+//
+//  Written by: Scott Robert Ladd
+
+#if !defined(__COMPLEX_HPP)
+#define __COMPLEX_HPP 1
+
+class Complex
+    {
+    private:
+        double Real; // Real part
+        double Imag; // Imaginary part
+
+        static void (* ErrorHandler)();
+
+    public:
+        // constructors
+        Complex (void);
+        Complex (const Complex & c);
+        Complex (const double & r, const double & i);
+        Complex (const double & r);
+
+        // method to set error handler function
+        static void SetErrorHandler(void (* userHandler)());
+
+        // value extraction methods
+        friend double real(const Complex & c);
+        friend double imag(const Complex & c);
+
+        // assignment methods
+        void operator = (const Complex & c);
+
+        // utility methods
+        friend double abs(const Complex & c);
+        friend double norm(const Complex & c);
+        friend double arg(const Complex & c);
+
+        // unary minus method
+        Complex operator - ();
+
+        // calculation methods
+        friend Complex operator + (const Complex & c1, const Complex & c2);
+        friend Complex operator - (const Complex & c1, const Complex & c2);
+        friend Complex operator * (const Complex & c1, const Complex & c2);
+        friend Complex operator / (const Complex & c1, const Complex & c2);
+
+        Complex operator += (const Complex & c);
+        Complex operator -= (const Complex & c);
+        Complex operator *= (const Complex & c);
+        Complex operator /= (const Complex & c);
+
+        // comparison methods
+        friend int operator == (const Complex & c1, const Complex & c2);
+        friend int operator != (const Complex & c1, const Complex & c2);
+
+        friend int operator <  (const Complex & c1, const Complex & c2);
+        friend int operator <= (const Complex & c1, const Complex & c2);
+
+        friend int operator >  (const Complex & c1, const Complex & c2);
+        friend int operator >= (const Complex & c1, const Complex & c2);
+
+        // polar coordinate methods
+        friend Complex polar(const double radius, const double theta = 0.0);
+        friend Complex conj(const Complex & c);
+
+        // trigonometric methods
+        friend Complex cos(const Complex & c);
+        friend Complex sin(const Complex & c);
+        friend Complex tan(const Complex & c);
+
+        friend Complex cosh(const Complex & c);
+        friend Complex sinh(const Complex & c);
+        friend Complex tanh(const Complex & c);
+
+        // logarithmic methods
+        friend Complex exp(const Complex & c);
+        friend Complex log(const Complex & c);
+
+        // "power" methods
+        friend Complex pow(const Complex & c, const Complex & power);
+        friend Complex sqrt(const Complex & c);
+
+        // output method
+        int Print() const;
+    };
+
+#endif
+//  Module:     Cp_asop
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Assignment operators for Complex objects
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+Complex Complex::operator += (const Complex & c)
+    {
+    Real += c.Real;
+    Imag += c.Imag;
+
+    return *this;
+    }
+
+Complex Complex::operator -= (const Complex & c)
+    {
+    Real -= c.Real;
+    Imag -= c.Imag;
+
+    return *this;
+    }
+
+Complex Complex::operator *= (const Complex & c)
+    {
+    double OldReal = Real; // save old Real value
+
+    Real = (Real * c.Real) - (Imag * c.Imag);
+    Imag = (OldReal * c.Imag) + (Imag * c.Real);
+
+    return *this;
+    }
+
+Complex Complex::operator /= (const Complex & c)
+    {
+    double den = norm(c);
+
+    if (den != 0.0)
+        {
+        double OldReal = Real;
+
+        Real = (Real * c.Real + Imag * c.Imag) / den;
+        Imag = (Imag * c.Real - OldReal * c.Imag) / den;
+        }
+    else
+        Complex::ErrorHandler();
+
+    return *this;
+    }
+//  Module:     Cp_comp
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Comparison operations for Complex class
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    #include "stdlib.h"
+    }
+
+// comparison methods
+int operator == (const Complex & c1, const Complex & c2)
+    {
+    return (c1.Real == c2.Real) && (c1.Imag == c2.Imag);
+    }
+
+int operator != (const Complex & c1, const Complex & c2)
+    {
+    return (c1.Real != c2.Real) || (c1.Imag != c2.Imag);
+    }
+
+
+int operator <  (const Complex & c1, const Complex & c2)
+    {
+    return abs(c1) < abs(c2);
+    }
+
+int operator <= (const Complex & c1, const Complex & c2)
+    {
+    return abs(c1) <= abs(c2);
+    }
+
+
+int operator >  (const Complex & c1, const Complex & c2)
+    {
+    return abs(c1) > abs(c2);
+    }
+
+int operator >= (const Complex & c1, const Complex & c2)
+    {
+    return abs(c1) >= abs(c2);
+    }
+//  Module:     Cp_log
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Logarithmic functions for Complex class
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    #include "stdlib.h"
+    }
+
+// logarithmic methods
+Complex exp(const Complex & c)
+    {
+    double X = exp(c.Real);
+
+    Complex result;
+
+    result.Real = X * cos(c.Imag);
+    result.Imag = X * sin(c.Imag);
+
+    return result;
+    }
+
+Complex log(const Complex & c)
+    {
+    double hypot = abs(c);
+
+    Complex result;
+
+    if (hypot > 0.0)
+        {
+        result.Real = log(hypot);
+        result.Imag = atan2(c.Imag, c.Real);
+        }
+    else
+        Complex::ErrorHandler();
+
+    return result;
+    }
+//  Module:     Cp_Misc
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Miscellaneous methods for Complex class
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    #include "stdio.h"
+    #include "stdlib.h"
+    }
+
+// polar coordinate methods
+Complex polar(const double radius, const double theta)
+    {
+    Complex result;
+
+    result.Real = radius * cos(theta);
+    result.Imag = radius * sin(theta);
+
+    return result;
+    }
+
+Complex conj(const Complex & c)
+    {
+    Complex result;
+
+    result.Real =  c.Real;
+    result.Imag = -c.Imag;
+
+    return result;
+    }
+
+// output method
+int Complex::Print() const
+    {
+    int out_len;
+
+    out_len = printf("(%g", Real);
+
+    if (Imag >= 0.0)
+        {
+        ++out_len;
+        putchar('+');
+        }
+
+    out_len += printf("%g)", Imag);
+
+    return out_len;
+    }
+//  Module:     Cp_ops
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Basic operators for Complex objects
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    }
+
+// unary minus method
+Complex Complex::operator - ()
+    {
+    Complex result;
+
+    result.Real = -Real;
+    result.Imag = -Imag;
+
+    return result;
+    }
+
+// calculation methods
+Complex operator + (const Complex & c1, const Complex & c2)
+    {
+    Complex result;
+
+    result.Real = c1.Real + c2.Real;
+    result.Imag = c1.Imag + c2.Imag;
+
+    return result;
+    }
+
+Complex operator - (const Complex & c1, const Complex & c2)
+    {
+    Complex result;
+
+    result.Real = c1.Real - c2.Real;
+    result.Imag = c1.Imag - c2.Imag;
+
+    return result;
+    }
+
+Complex operator * (const Complex & c1, const Complex & c2)
+    {
+    Complex result;
+
+    result.Real = (c1.Real * c2.Real) - (c1.Imag * c2.Imag);
+    result.Imag = (c1.Real * c2.Imag) + (c1.Imag * c2.Real);
+
+    return result;
+    }
+
+Complex operator / (const Complex & c1, const Complex & c2)
+    {
+    Complex result;
+    double den;
+
+    den = norm(c2);
+
+    if (den != 0.0)
+        {
+        result.Real = (c1.Real * c2.Real + c1.Imag * c2.Imag) / den;
+        result.Imag = (c1.Imag * c2.Real - c1.Real * c2.Imag) / den;
+        }
+    else
+        Complex::ErrorHandler();
+
+    return result;
+    }
+//  Module:     Cp_Pow
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Power function for Complex class
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    #include "stdlib.h"
+    }
+
+// "power" methods
+Complex pow(const Complex & c, const Complex & power)
+    {
+    Complex result;
+
+    if (power.Real == 0.0 && power.Imag == 0.0)
+        {
+        result.Real = 1.0;
+        result.Imag = 0.0;
+        }
+    else
+        {
+        if (c.Real != 0.0 || c.Imag != 0.0)
+            result = exp(log(c) * power);
+        else
+            Complex::ErrorHandler();
+        }
+
+    return result;
+    }
+
+Complex sqrt(const Complex & c)
+    {
+    return pow(c,Complex(0.5,0.0));
+    }
+//  Module:     Cp_trig
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Trignometric functions for Complex class
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    #include "stdlib.h"
+    }
+
+// trigonometric methods
+Complex cos(const Complex & c)
+    {
+    Complex result;
+
+    result.Real =  cos(c.Real) * cosh(c.Imag);
+    result.Imag = -sin(c.Real) * sinh(c.Imag);
+
+    return result;
+    }
+
+Complex sin(const Complex & c)
+    {
+    Complex result;
+
+    result.Real = sin(c.Real) * cosh(c.Imag);
+    result.Imag = cos(c.Real) * sinh(c.Imag);
+
+    return result;
+    }
+
+Complex tan(const Complex & c)
+    {
+    Complex result = sin(c) / cos(c);
+
+    return result;
+    }
+
+Complex cosh(const Complex & c)
+    {
+    Complex result;
+
+    result.Real = cos(c.Imag) * cosh(c.Real);
+    result.Imag = sin(c.Imag) * sinh(c.Real);
+
+    return result;
+    }
+
+Complex sinh(const Complex & c)
+    {
+    Complex result;
+
+    result.Real = cos(c.Imag) * sinh(c.Real);
+    result.Imag = sin(c.Imag) * cosh(c.Real);
+
+    return result;
+    }
+
+Complex tanh(const Complex & c)
+    {
+    Complex result = sinh(c) / cosh(c);
+
+    return result;
+    }
+//  Module:     Cp_Util
+//  Version:    2.20
+//
+//  Language:   C++ 2.0
+//  Environ:    Any
+//
+//  Purpose:    Utility methods for Complex class
+//
+//  Written by: Scott Robert Ladd
+
+#include "Complex.hpp"
+
+extern "C"
+    {
+    #include "math.h"
+    #include "stdio.h"
+    #include "stdlib.h"
+    }
+
+// prototype for default error handler
+static void DefaultHandler();
+
+// assignment of default handler address to error function pointer
+void (* Complex::ErrorHandler)() = DefaultHandler;
+
+// default error handler
+static void DefaultHandler()
+    {
+    puts("\aERROR in complex object: DIVIDE BY ZERO\n");
+    exit(1);
+    }
+
+// constructors
+Complex::Complex (void)
+    {
+    Real = 0.0;
+    Imag = 0.0;
+    }
+
+Complex::Complex (const Complex & c)
+    {
+    Real = c.Real;
+    Imag = c.Imag;
+    }
+
+Complex::Complex (const double & r, const double & i)
+    {
+    Real = r;
+    Imag = i;
+    }
+
+Complex::Complex (const double & r)
+    {
+    Real = r;
+    Imag = 0.0;
+    }
+
+// method to set error handler function
+void Complex::SetErrorHandler(void (* userHandler)())
+    {
+    ErrorHandler = userHandler;
+    }
+
+// value extraction methods
+double real (const Complex & c)
+    {
+    return c.Real;
+    }
+
+double imag (const Complex & c)
+    {
+    return c.Imag;
+    }
+
+// assignment method
+void Complex::operator = (const Complex & c)
+    {
+    Real = c.Real;
+    Imag = c.Imag;
+    }
+
+// utility methods
+double abs(const Complex & c)
+    {
+    double result = sqrt(c.Real * c.Real + c.Imag * c.Imag);
+
+    return result;
+    }
+
+double norm(const Complex & c)
+    {
+    double result = (c.Real * c.Real) + (c.Imag * c.Imag);
+
+    return result;
+    }
+
+double arg(const Complex & c)
+    {
+    double result = atan2(c.Imag, c.Real);
+
+    return result;
+    }
